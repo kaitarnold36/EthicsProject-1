@@ -14,11 +14,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Introduction
-
+In 2012, Minerva High School in Pittsburgh, Pennsylvania was struggling with its high drop out rates at 9% and low (on-time) graduation rates of 55%.  The school's principal and board will respond to the problem with a data-driven solution aimed at getting their students back on track and gaining insight into the why behind the high dropout rates. This solution will use machine learning to identify predictors of student disengagement as a proxy for potential drop out. Flagging at risk students will enable the teachers, counselors, administrators to respond accordingly with new interventions, meetings with school counselors and/or parents, new incentive structures, etc in the hopes of reversing the high dropout rates.
 
 
 ## Data Import and Cleaning
+Upon import of the data, we converted all string columns into factors utilizing R's stringAsFactors argument in the read.csv function. We then removed the student ID field because it will not be used in this analysis. We converted all factors into numeric and converted the dropped field back into a factor for use as the response variable in our modeling efforts. 
 
+In an effort to normalize our data. we rescaled our resulting data using the following logic:
+𝑧=(𝑥−min(𝑥))/(max(𝑥)−min(𝑥))
 
 
 ```{r readData, message=FALSE, warning=FALSE, error=TRUE}
