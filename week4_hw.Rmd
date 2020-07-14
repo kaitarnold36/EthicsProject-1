@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Introduction
+
 In 2012, Minerva High School in Pittsburgh, Pennsylvania was struggling with its high drop out rates at 9% and low (on-time) graduation rates of 55%.  The school's principal and board will respond to the problem with a data-driven solution aimed at getting their students back on track and gaining insight into the why behind the high dropout rates. This solution will use machine learning to identify predictors of student disengagement as a proxy for potential drop out. Flagging at risk students will enable the teachers, counselors, administrators to respond accordingly with new interventions, meetings with school counselors and/or parents, new incentive structures, etc in the hopes of reversing the high dropout rates.
 
 
@@ -21,7 +22,7 @@ In 2012, Minerva High School in Pittsburgh, Pennsylvania was struggling with its
 Upon import of the data, we converted all string columns into factors utilizing R's stringAsFactors argument in the read.csv function. We then removed the student ID field because it will not be used in this analysis. We converted all factors into numeric and converted the dropped field back into a factor for use as the response variable in our modeling efforts. 
 
 In an effort to normalize our data. we rescaled our resulting data using the following logic:
-z=(x−min(x))/(max(x)−min(x))
+` z = (x-min(x)) / (max(x) - min(x)) `
 
 
 ```{r readData, message=FALSE, warning=FALSE, error=TRUE}
@@ -35,23 +36,18 @@ library(rpart)
 library(partykit)
 library(randomForest)
 library(e1071)
-
 #Read the csv file
 case3data <- read.csv("case3data.csv",stringsAsFactors = TRUE)
-
 # remove studentID and move dropped to the first column
 case3data <- case3data %>%
     select(-studentID) %>% select(dropped,everything())
  
 # convert all factors to numeric
 case3data <-case3data %>% mutate_if(is.factor,as.numeric)
-
 # convert dropped to a factor
 case3data$dropped <- as.factor(case3data$dropped)
-
 #Print the summary
 #case3data %>% summary
-
 ```
 
 ```{r dataCleansing, warning=FALSE, error=TRUE, message=FALSE}
@@ -76,19 +72,18 @@ test_idx <- sample.int(n, size = round(0.2 * n))
 training <- rescaled_df[-test_idx,]
 # set the the test data to be those rows matching the index list
 testing <- rescaled_df[test_idx,] 
-
 ```
 
 
 ## Model Building
 
-
 ### Logistic Regression
 
-```{r logisticRegression, warning=FALSE, error=TRUE, message=FALSE}
+Our response variable ` dropped` is a categorical variable. Let's apply the Logistic Regression to build the model and predict the response variable. Logistic regression is a statistical model that in its basic form uses a logistic function to model a binary dependent variable. We will use the ` glm` method using 10 fold repeated cross validation on the training data to select our final model; which we will use to predict the response on test data and measure the accuracy.
+
+```{r logisticRegression, warning=FALSE, error=TRUE, message=FALSE, echo = FALSE}
 # set the seed for consistent results
 set.seed(1842)
-
 # Set up the resampling, here repeated CV
 tr <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
 #Note that trace is a parameter sent to the underlying modeling function
@@ -98,53 +93,48 @@ logistic_model <- train(dropped ~ .,
                         family = "binomial", 
                         trControl = tr, 
                         trace = FALSE)
-
 #Check the Final Model
 logistic_model$finalModel
-
 #Predict
 testing$logistic_pred <- predict(logistic_model, newdata = testing)
-
 # create the confusion matrix using the table function
 confusion_logistic <- table(Predicted =testing$logistic_pred,
                         Actual=testing$dropped)
-
 # show the accuracy of the decision tree
 cat("Overall accuracy of prediction:\t", 
     sum(diag(confusion_logistic)/nrow(testing)) %>% 
       round(4),"\n")
 ```
 
+So using Logistic Regression we got around 95.4% accuracy which is quite impressive.
+
 ### Decision Tree
 
-```{r descTree, warning=FALSE, error=TRUE, message=FALSE}
+Let's try another method called Decision Tree. The Decision Tree algorithm belongs to the family of supervised learning algorithms; it can be used for solving both regression and classification problems. The general motivation for using a decision tree is to predict the class or value of target variables by learning decision rules inferred from prior data (the training data). The decision tree algorithm tries to solve the problem, by using a tree representation. Each  internal node of the tree corresponds to an attribute and each leaf node corresponds to a class label. In R there are
+several packages available to run the decision tree algorithm. Here we’ll use ` rpart` package and also ` caret`
+package implement the decision tree with cross-validation.
+
+```{r descTree, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # set the seed for consistent results
 set.seed(1842)
-
 # Define the formula
 form <- paste(names(rescaled_df[1]),paste(names(rescaled_df[-1]), collapse='+'),sep = '~') %>% 
   as.formula()
-
 # show the formula
-form
-
+# form
 # Generate the Decision tree
 diag.tree <- rpart(form, data=training)
 # Print the Tree CP
-printcp(diag.tree)
+# printcp(diag.tree)
 # Plotting the Tree CP
-plotcp(diag.tree)
+# plotcp(diag.tree)
 # Partykit plot of the Tree
 plot(as.party(diag.tree))
 ```
 
-```{r pruneTree, warning=FALSE, error=TRUE, message=FALSE}
-diag.new.tree <- prune(diag.tree, cp = 0.029)
-# Partykit plot of the Pruned Tree
-plot(as.party(diag.new.tree))
-```
+Let's use this Decision tree to predict the response.
 
-```{r treePredict, warning=FALSE, error=TRUE, message=FALSE}
+```{r treePredict, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # use the decision tree created above to predict values in the test data 
 # and then store the results
 testing$tree_predict <- predict(diag.new.tree, 
@@ -153,12 +143,10 @@ testing$tree_predict <- predict(diag.new.tree,
 # create the confusion matrix using the table function
 confusion_tree <- table(Predicted =testing$tree_predict,
                         Actual=testing$dropped)
-
 # Print a legend
 cat("0 = Not Dropped Out, 1 = Dropped Out\n\n")
 # Print the confusion matrix
 confusion_tree
-
 # show the accuracy of the decision tree
 cat("Overall accuracy of prediction:\t", 
     sum(diag(confusion_tree)/nrow(testing)) %>% 
@@ -175,9 +163,13 @@ cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t",
       round(4),"\n")
 ```
 
+So using Decision Tree we got around 96.1% accuracy which is even better than Logistic Regression.
+
 ### Random Forest
 
-```{r randForest, warning=FALSE, error=TRUE, message=FALSE}
+Random forest, like its name implies, consists of a large number of individual decision trees that operate as an ensemble. Each individual tree in the random forest generates a class prediction, and the class with the most votes or mean prediction of the individual trees becomes our model’s prediction. The fundamental concept behind random forest is a simple but powerful one - the wisdom of crowds. We create a random forest using the package ` randomForest` to be used as a basis to predict diagnosis. The forest is set up so that there will be 500 trees and 3 variables will be tried at each split.
+
+```{r randForest, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # set the seed for consistent results
 set.seed(1842)
 # Generate the Random Forest
@@ -191,7 +183,7 @@ diag.forest
 
 Let's generate the importance table of the predictors from the random forest model.
 
-```{r rfImportance, warning=FALSE, error=TRUE, message=FALSE}
+```{r rfImportance, warning=FALSE, error=TRUE, message=FALSE, echo = FALSE}
 # Importance of Variables
 randomForest::importance(diag.forest) %>%
   as.data.frame() %>% 
@@ -204,7 +196,7 @@ randomForest::importance(diag.forest) %>%
 We use the forest to predict the diagnosis in the test data.  We show the overall accuracy of the prediction.  Then we show the overall accuracy of the classifier with this value of K as well as the misclassification rates.
 
 
-```{r rfPredict, warning=FALSE, error=TRUE, message=FALSE}
+```{r rfPredict, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # use the Random Forest created above to predict values in the test data 
 # and then store the results
 testing$rf_pred <- predict(diag.forest, 
@@ -213,12 +205,10 @@ testing$rf_pred <- predict(diag.forest,
 # create the confusion matrix using the table function
 confusion_rf <- table(Predicted=testing$rf_pred,
                         Actual=testing$dropped)
-
 # Print a legend
 cat("0 = Not Dropped Out, 1 = Dropped Out\n\n")
 # Print the confusion matrix
 confusion_rf
-
 # show the accuracy of the decision tree
 cat("Overall accuracy of prediction:\t", 
     sum(diag(confusion_rf)/nrow(testing)) %>% 
@@ -235,11 +225,11 @@ cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t",
       round(4),"\n")
 ```
 
-
+So using Random Forest we got around 96.8%% accuracy which is even better than both Logistic Regression and Decision Tree.
 
 ### K-Nearest Neighbors 
 
-```{r knnModel, warning=FALSE, error=TRUE, message=FALSE}
+```{r knnModel, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # Choose a value for K that is equal to the square root of n,
 # the number of observations in the training set
 k_try = sqrt(nrow(training))
@@ -249,16 +239,13 @@ diag_knn <- knn(training[2:14],
                    testing[2:14], 
                    cl = training$dropped, 
                    k=119)
-
 # create the confusion matrix using the table function
 confusion_knn <- table(Predicted=diag_knn,
                         Actual=testing$dropped)
-
 # Print a legend
 cat("0 = Not Dropped Out, 1 = Dropped Out\n\n")
 # Print the confusion matrix
 confusion_knn
-
 # show the accuracy of the decision tree
 cat("Overall accuracy of prediction:\t", 
     sum(diag(confusion_knn)/nrow(testing)) %>% 
@@ -273,15 +260,14 @@ cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t",
     (confusion_knn[2,1] / 
        (confusion_knn[2,1] + confusion_knn[2,2])) %>% 
       round(4),"\n")
-
 ```
 
 Let's tune K to see if we can get better accuracy
 
 
-We will use the caret package "train" function to see if a diffent value of K results in higher accuracy.  This code block will step through odd numbers from 1 to 99 as values of K.  If a better value of N is found, then we will use that value instead.
+We will use the caret package "train" function to see if a different value of K results in higher accuracy.  This code block will step through odd numbers from 1 to 99 as values of K.  If a better value of N is found, then we will use that value instead.
 
-```{r knnCaret, warning=FALSE, error=TRUE, message=FALSE}
+```{r knnCaret, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # set the seed for consistent results
 set.seed(1842)
 # set the train control to use 5-fold cross validation
@@ -304,7 +290,7 @@ Revising our solution to use K = 5
 
 We use the optimized value of K that was determined in the step above. Then we show the overall accuracy of the classifier with this optimized value of K as well as the misclassifcation rates.
 
-```{r tuneKnn, warning=FALSE, error=TRUE, message=FALSE}
+```{r tuneKnn, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # We'll use the value obtained above as our value of K
 diag_knn_opt <- knn(training[2:14],testing[2:14],
                     cl=training$dropped,k=knn_fit$bestTune)
@@ -315,7 +301,6 @@ confusion_knn_opt <- table(Predicted = diag_knn_opt,
 cat("0 = Not Dropped Out, 1 = Dropped Out\n\n")
 # Print the confusion matrix
 confusion_knn_opt
-
 # show the accuracy of the decision tree
 cat("Overall accuracy of prediction:\t", 
     sum(diag(confusion_knn_opt)/nrow(testing)) %>% 
@@ -333,5 +318,3 @@ cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t",
 ```
 
 ## Summary & Conclusion
-
-
