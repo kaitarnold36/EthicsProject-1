@@ -50,6 +50,7 @@ case3data$dropped <- as.factor(case3data$dropped)
 #case3data %>% summary
 ```
 
+Below, we rescale the data using the normalization method described above and we create the training and testing data as 80/20.
 ```{r dataCleansing, warning=FALSE, error=TRUE, message=FALSE}
 # First, rescale the data
 # create the rescaling function we have been using thus far
@@ -109,11 +110,11 @@ cat("Overall accuracy of prediction:\t",
 ```
 
 ```{r logisticRegression_conclusion, warning=FALSE, error=TRUE, message=FALSE, echo = FALSE, eval= FALSE}
-So using Logistic Regression we got around 95.4% accuracy which is quite impressive.
+Using Logistic Regression, we recieved results around 95.4% accuracy which is quite impressive.
 ```
 ### Decision Tree
 
-We selected a method called Decision Tree to model the data. It performed very well and is easdy to visualize and understand. The Decision Tree algorithm belongs to the family of supervised learning algorithms; it can be used for solving both regression and classification problems. The general motivation for using a decision tree is to predict the class or value of target variables by learning decision rules inferred from prior data (the training data). The decision tree algorithm tries to solve the problem by using a tree representation. Each internal node of the tree corresponds to an attribute and each leaf node corresponds to a class label. In R there are several packages available to run the decision tree algorithm. Here we’ll use `rpart` package and also `caret` package implement the decision tree with cross-validation.
+Next, we selected a Decision Tree algorithm to model the data. It performed very well and is easy to visualize and understand. The Decision Tree algorithm belongs to the family of supervised learning algorithms; it can be used for solving both regression and classification problems. The general motivation for using a decision tree is to predict the class or value of target variables by learning decision rules inferred from prior data (the training data). The decision tree algorithm tries to solve the problem by using a tree representation. Each internal node of the tree corresponds to an attribute and each leaf node corresponds to a class label. In R there are several packages available to run the decision tree algorithm. Here, we’ll use `rpart` package and also `caret` package to implement the decision tree with cross-validation.
 
 ```{r descTree, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 # set the seed for consistent results
@@ -133,7 +134,7 @@ diag.tree <- rpart(form, data=training)
 #plot(as.party(diag.tree))
 ```
 
-
+Next, we will prune the decision tree in an effort to reduce the size of the tree by removing sections of the tree that provide little predictive power. This will reduce complexity and overfitting of the final model leading to better interpretability for our school board and principle Vulcani. 
 ```{r pruneTree, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
 diag.new.tree <- prune(diag.tree, cp = 0.029)
 # Partykit plot of the Pruned Tree
@@ -176,7 +177,7 @@ cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t",
 
 ### Random Forest
 
-Random forest, like its name implies, consists of a large number of individual decision trees that operate as an ensemble. Each individual tree in the random forest generates a class prediction, and the class with the most votes or mean prediction of the individual trees becomes our model’s prediction. The fundamental concept behind random forest is a simple but powerful one - the wisdom of crowds. We create a random forest using the package ` randomForest` to be used as a basis to predict diagnosis. The forest is set up so that there will be 500 trees and 3 variables will be tried at each split.
+Random forest, like its name implies, consists of a large number of individual decision trees that operate as an ensemble. Each individual tree in the random forest generates a class prediction, and the class with the most votes or mean prediction of the individual trees becomes our model’s prediction. The fundamental concept behind random forest is a simple but powerful one - the wisdom of crowds. We create a random forest using the package `randomForest` to be used as a basis to predict diagnosis. The forest is set up so that there will be 500 trees and 3 variables will be tried at each split.
 ```
 
 ```{r randForest, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE, eval= FALSE}
@@ -193,7 +194,7 @@ diag.forest
 
 ```{r randForest_predict, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE, eval= FALSE}
 
-Let's generate the importance table of the predictors from the random forest model.
+Let's generate the importance table of the predictors from the random forest model.This will allow us to see the predictive power of each of our variables in the data. Knowing the main drivers of the drop out flag will enable the school's leadership team to respond more effificently to the drop out rate. 
 ```
 
 
@@ -207,7 +208,7 @@ randomForest::importance(diag.forest) %>%
 ```
 
 ```{r randForest_predict2, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE, eval= FALSE}
-We use the forest to predict the diagnosis in the test data.  We show the overall accuracy of the prediction.  Then we show the overall accuracy of the classifier with this value of K as well as the misclassification rates.
+We use the forest to predict the diagnosis in the test data.  We show the overall accuracy of the prediction.  Then, we show the overall accuracy of the classifier with this value of K as well as the misclassification rates.
 ```
 
 ```{r rfPredict, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE, eval= FALSE}
@@ -241,7 +242,7 @@ cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t",
 
 ```{r randForest_end_and_KNN_begin, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE, eval= FALSE}
 
-So using Random Forest we got around 96.8%% accuracy which is even better than both Logistic Regression and Decision Tree.
+So using Random Forest we got around 96.8%% accuracy, which is even better than both Logistic Regression and Decision Tree.
 
 ### K-Nearest Neighbors 
 ```
@@ -346,9 +347,11 @@ Decision trees are easy for people to understand, because the visualization is r
 -Random Forest with 96.95% accuracy  
 -KNN with 94.72% accuracy  
 
-The decision tree proved to be the second most accurate method tested.  It is far easier to comprehend than the most accurate method - the random forest - and is only slightly less accurate.  The decision tree was able to predict the out even though it only used two variables: GPA and grade.
+The decision tree proved to be the second most accurate method tested.  It is far easier to comprehend than the most accurate method - the random forest - and is only slightly less accurate.  The decision tree was able to predict the output using only used two variables: GPA and grade. This shows us that student's performance at each stage in their high school career is a key factor in their decision to drop out. In the school's action items from this model, the primary focus would be to improve student's GPA performance. 
 
-ADD MORE TEXT
+Even though the random forest had the highest accuracy, we will use the decision tree as our final model for better interpretability. In comparison to Hephaestats' final model with 8 key indicators, our final accuracy used less variables and was over 4 percentage points higher than their model. We were not given all of the variables that Hephaestats had at their disposal, so it is warranted that we developed a less complex model. The specific modeling efforts used by Hepaestats was not revealed in the case study. 
+
+
 
 
 
